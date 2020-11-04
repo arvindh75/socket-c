@@ -11,59 +11,67 @@
 #define BUFSIZE 100000
 
 void get(int socketfd) {
-    char* arg = strtok(NULL, " \t");
-    char filename[BUFSIZE];
-    strcpy(filename, arg);
-    printf("Filename: %s\n", filename);
-    if(send(socketfd, filename, strlen(filename), 0) == -1) {
-        perror("Sending filename");
-        return;
-    }
-    char size[BUFSIZE];
-    recv(socketfd, size, BUFSIZE, 0);
-    printf("File size: %d\n", atoi(size));
-    int fp = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    ssize_t n;
-    char buff[BUFSIZE];
-    int written_lines=0;
-    int num_loops = (atoi(size)/BUFSIZE) + 1;
-    //printf("Num loops: %d\n", num_loops);
-    float progress = 0.0;
-    char prostr[1000];
-    while(num_loops > 0) {
-        if(num_loops == 1) {
-            if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
-                perror("Reading from buffer");
-                break;
-            }
-            progress += (float)(n/atoi(size));
-            if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
-                perror("Writing content");
-                return;
-            }
+    char* arg;
+    arg = strtok(NULL, " \t");
+    while(arg != NULL) {
+        char filename[BUFSIZE];
+        strcpy(filename, arg);
+        printf("\nFilename: %s\n", filename);
+        if(send(socketfd, filename, strlen(filename), 0) == -1) {
+            perror("Sending filename");
+            return;
         }
-        else {
-            if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
-                perror("Reading from buffer");
-                break;
+        char size[BUFSIZE];
+        recv(socketfd, size, BUFSIZE, 0);
+        if(atoi(size) == 0) {
+            printf("File not found!\n");
+            return;
+        }
+        printf("File size: %d\n", atoi(size));
+        int fp = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        ssize_t n;
+        char buff[BUFSIZE];
+        int written_lines=0;
+        int num_loops = (atoi(size)/BUFSIZE) + 1;
+        //printf("Num loops: %d\n", num_loops);
+        float progress = 0.0;
+        char prostr[1000];
+        while(num_loops > 0) {
+            if(num_loops == 1) {
+                if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
+                    perror("Reading from buffer");
+                    break;
+                }
+                progress += (float)(n/atoi(size));
+                if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
+                    perror("Writing content");
+                    return;
+                }
             }
-            progress += (float)(n/atoi(size));
-            if(write(fp, buff, BUFSIZE) != n) {
-                perror("Writing content");
-                return;
-            }
-        } 
-        sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
-        write(1, prostr, strlen(prostr));
-        printf("\nWriting a line - %d\n", written_lines);
-        written_lines++;
-        //if(written_lines > 0)
-        //    break;
-        num_loops--;
-        memset(buff, 0, BUFSIZE);
+            else {
+                if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
+                    perror("Reading from buffer");
+                    break;
+                }
+                progress += (float)(n/atoi(size));
+                if(write(fp, buff, BUFSIZE) != n) {
+                    perror("Writing content");
+                    return;
+                }
+            } 
+            sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
+            write(1, prostr, strlen(prostr));
+            printf("\nWriting a line - %d\n", written_lines);
+            written_lines++;
+            //if(written_lines > 0)
+            //    break;
+            num_loops--;
+            memset(buff, 0, BUFSIZE);
+        }
+        close(fp);
+        printf("Finished writing the contents\n");
+        arg = strtok(NULL, " \t");
     }
-    close(fp);
-    printf("Finished writing the contents\n");
 }
 
 

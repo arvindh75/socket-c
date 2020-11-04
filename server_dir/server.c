@@ -26,6 +26,9 @@ void sendf(int socketfd) {
     int fp = open(filename, O_RDONLY);
     if(fp == -1) {
         perror("File");
+        if(send(socketfd, "0", 1, 0) == -1) {
+            perror("Sending size");
+        }
         return;
     }
     int fsize = lseek(fp, 0, SEEK_END);
@@ -95,8 +98,8 @@ int main(int argc, char const *argv[]) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
-    //while(1)
-    sendf(new_socket);
+    while(1)
+        sendf(new_socket);
     //valread = read(new_socket , buffer, 1024);  // read infromation received into the buffer
     //printf("%s\n",buffer);
     //send(new_socket , hello , strlen(hello) , 0 );  // use sendto() and recvfrom() for DGRAM
