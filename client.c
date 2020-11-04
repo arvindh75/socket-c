@@ -40,23 +40,29 @@ int main(int argc, char* argv[]) {
     serverad.sin_family = AF_INET;
     serverad.sin_addr.s_addr = htonl(INADDR_ANY);
     serverad.sin_port = htons(SERVERPORT);
+    printf("\nBinding\n");
     if(bind(socketfd, (struct sockaddr *) &serverad, sizeof(serverad)) == -1) {
         perror("Binding");
         close(socketfd);
         return 0;
     }
-    if(listen(socketfd, LINSTENPORT) == -1) {
+    printf("\nBinding successful\n");
+    printf("\nListening\n");
+    if(listen(socketfd, 3) == -1) {
         perror("Listening");
         close(socketfd);
         return 0;
     }
-    socklen_t adlen = sizeof(clientad);
-    int connectfd = accept(socketfd, (struct sockaddr *) &clientad, &adlen);
+    printf("\nListening successful\n");
+    socklen_t adlen = sizeof(serverad);
+    int connectfd = accept(socketfd, (struct sockaddr *) &serverad, &adlen);
+    printf("\nConnecting\n");
     if(connectfd == -1) {
         perror("Connection");
         close(socketfd);
         return 0;
     }
+    printf("\nConnection successful\n");
     char input[10000];
     int exit_read = 0; 
     int leninp;
