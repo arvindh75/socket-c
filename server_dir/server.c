@@ -61,7 +61,7 @@ void sendf(int socketfd) {
         memset(line, 0, BUFSIZE);
         num_loops--;
     }
-    printf("Sent file\n");
+    printf("Sent file \n");
 }
 
 int main(int argc, char const *argv[]) {

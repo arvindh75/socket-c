@@ -27,13 +27,16 @@ void get(int socketfd) {
     char buff[BUFSIZE];
     int written_lines=0;
     int num_loops = (atoi(size)/BUFSIZE) + 1;
-    printf("Num loops: %d\n", num_loops);
+    //printf("Num loops: %d\n", num_loops);
+    float progress = 0.0;
+    char prostr[1000];
     while(num_loops > 0) {
         if(num_loops == 1) {
             if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
                 perror("Reading from buffer");
                 break;
             }
+            progress += (float)(n/atoi(size));
             if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
                 perror("Writing content");
                 return;
@@ -44,12 +47,15 @@ void get(int socketfd) {
                 perror("Reading from buffer");
                 break;
             }
+            progress += (float)(n/atoi(size));
             if(write(fp, buff, BUFSIZE) != n) {
                 perror("Writing content");
                 return;
             }
         } 
-        printf("Writing a line - %d\n", written_lines);
+        sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
+        write(1, prostr, strlen(prostr));
+        printf("\nWriting a line - %d\n", written_lines);
         written_lines++;
         //if(written_lines > 0)
         //    break;
