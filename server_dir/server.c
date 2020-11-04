@@ -22,10 +22,11 @@ void sendf(int socketfd) {
         }
     }
     char line[BUFSIZE];
-    printf("Finished getting the name\n");
+    printf("Finished getting the name - [%s] [%s]\n", filename, buff);
     FILE *fp = fopen(filename, "r");
     if(fp == NULL) {
         perror("File");
+        return;
     }
     while((n = fread(line, sizeof(char), BUFSIZE, fp)) > 0) {
         if(ferror(fp)) {

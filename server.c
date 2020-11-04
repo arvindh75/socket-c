@@ -24,6 +24,10 @@ void sendf(int socketfd) {
             }
         }
     }
+    else {
+        perror("Filename");
+        return;
+    }
     char line[BUFSIZE];
     printf("Finished getting the name\n");
     FILE *fp = fopen(filename, "r");
