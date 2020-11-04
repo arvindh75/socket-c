@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <fcntl.h>
 
 #define PORT 8000
 #define BUFSIZE 100000
@@ -18,22 +19,44 @@ void get(int socketfd) {
         perror("Sending filename");
         return;
     }
-    FILE *fp = fopen(filename, "w+");
+    char size[BUFSIZE];
+    recv(socketfd, size, BUFSIZE, 0);
+    printf("File size: %d\n", atoi(size));
+    int fp = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     ssize_t n;
     char buff[BUFSIZE];
     int written_lines=0;
-    while((n = recv(socketfd, buff, BUFSIZE, 0)) != -1) {
-        if(fwrite(buff, sizeof(char), n, fp) != n) {
-            perror("Writing content");
-            return;
+    int num_loops = (atoi(size)/BUFSIZE) + 1;
+    printf("Num loops: %d\n", num_loops);
+    while(num_loops > 0) {
+        if(num_loops == 1) {
+            if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
+                perror("Reading from buffer");
+                break;
+            }
+            if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
+                perror("Writing content");
+                return;
+            }
         }
+        else {
+            if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
+                perror("Reading from buffer");
+                break;
+            }
+            if(write(fp, buff, BUFSIZE) != n) {
+                perror("Writing content");
+                return;
+            }
+        } 
         printf("Writing a line - %d\n", written_lines);
         written_lines++;
-        if(written_lines > 2)
-            break;
+        //if(written_lines > 0)
+        //    break;
+        num_loops--;
         memset(buff, 0, BUFSIZE);
     }
-    fclose(fp);
+    close(fp);
     printf("Finished writing the contents\n");
 }
 

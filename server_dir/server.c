@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <fcntl.h>
 
 #define PORT 8000
 #define BUFSIZE 100000
@@ -22,20 +23,32 @@ void sendf(int socketfd) {
         }
     }
     printf("Finished getting the name - [%s]\n", filename);
-    FILE *fp = fopen(filename, "r");
-    if(fp == NULL) {
+    int fp = open(filename, O_RDONLY);
+    if(fp == -1) {
         perror("File");
         return;
     }
+    int fsize = lseek(fp, 0, SEEK_END);
+    int length = snprintf(NULL, 0,"%d",fsize);
+    char fsize_st[length+1];
+    sprintf(fsize_st, "%d", fsize);
+    printf("Size: %d\n", fsize);
+    if(send(socketfd, fsize_st, length, 0) == -1) {
+        perror("Sending size");
+        return;
+    }
+    lseek(fp, 0, SEEK_SET);
     char line[BUFSIZE] = {0};
     printf("Sending file\n");
     int num_lines=0;
-    while(1) {
-        if((n = fread(line, sizeof(char), BUFSIZE, fp)) < 0) {
+    int num_loops = (fsize/BUFSIZE) + 1;
+    printf("Num loops: %d\n", num_loops);
+    while(num_loops > 0) {
+        if((n = read(fp, line, fsize)) < 0) {
             printf("Reading file error\n");
             return;
         }
-        if(n != BUFSIZE && ferror(fp)) {
+        if(n != fsize) {
             perror("File read");
             return;
         }
@@ -45,11 +58,10 @@ void sendf(int socketfd) {
         }
         printf("Sent a line - %d\n", num_lines);
         num_lines++;
-        if(num_lines > 2)
-            break;
         memset(line, 0, BUFSIZE);
+        num_loops--;
     }
-    printf("Sent file (or) Failed\n");
+    printf("Sent file\n");
 }
 
 int main(int argc, char const *argv[]) {
