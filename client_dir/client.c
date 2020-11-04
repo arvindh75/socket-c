@@ -15,14 +15,19 @@ void get(int socketfd) {
     arg = strtok(NULL, " \t");
     while(arg != NULL) {
         char filename[BUFSIZE];
+        char size[BUFSIZE];
+        char buff[BUFSIZE];
+        char prostr[1000];
         strcpy(filename, arg);
         printf("\nFilename: %s\n", filename);
         if(send(socketfd, filename, strlen(filename), 0) == -1) {
             perror("Sending filename");
             return;
         }
-        char size[BUFSIZE];
-        recv(socketfd, size, BUFSIZE, 0);
+        if(recv(socketfd, size, BUFSIZE, 0) == -1) {
+            perror("Reading from buffer");
+            return;
+        }
         if(atoi(size) == 0) {
             printf("File not found!\n");
             return;
@@ -30,23 +35,25 @@ void get(int socketfd) {
         printf("File size: %d\n", atoi(size));
         int fp = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         ssize_t n;
-        char buff[BUFSIZE];
         int written_lines=0;
         int num_loops = (atoi(size)/BUFSIZE) + 1;
-        //printf("Num loops: %d\n", num_loops);
+        printf("Num loops: %d\n", num_loops);
         float progress = 0.0;
-        char prostr[1000];
         while(num_loops > 0) {
             if(num_loops == 1) {
+                printf("HERE1\n");
                 if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
                     perror("Reading from buffer");
                     break;
                 }
+                printf("HERE2\n");
                 progress += (float)(n/atoi(size));
+                printf("HERE3\n");
                 if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
                     perror("Writing content");
                     return;
                 }
+                printf("HERE4\n");
             }
             else {
                 if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
@@ -59,9 +66,9 @@ void get(int socketfd) {
                     return;
                 }
             } 
+            //printf("\nWriting a line - %d\n", written_lines);
             sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
             write(1, prostr, strlen(prostr));
-            printf("\nWriting a line - %d\n", written_lines);
             written_lines++;
             //if(written_lines > 0)
             //    break;
@@ -69,7 +76,7 @@ void get(int socketfd) {
             memset(buff, 0, BUFSIZE);
         }
         close(fp);
-        printf("Finished writing the contents\n");
+        printf("\nFinished writing the contents\n");
         arg = strtok(NULL, " \t");
     }
 }
