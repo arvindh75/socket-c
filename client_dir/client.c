@@ -11,20 +11,29 @@
 
 void get(int socketfd) {
     char* arg = strtok(NULL, " \t");
-    FILE *fp = fopen(arg, "w+");
-    if(send(socketfd, arg, sizeof(arg), 0) == -1) {
+    char filename[BUFSIZE];
+    strcpy(filename, arg);
+    printf("Filename: %s\n", filename);
+    if(send(socketfd, filename, strlen(filename), 0) == -1) {
         perror("Sending filename");
         return;
     }
+    FILE *fp = fopen(filename, "w+");
     ssize_t n;
     char buff[BUFSIZE];
+    int written_lines=0;
     while((n = recv(socketfd, buff, BUFSIZE, 0)) != -1) {
         if(fwrite(buff, sizeof(char), n, fp) != n) {
             perror("Writing content");
             return;
         }
+        printf("Writing a line - %d\n", written_lines);
+        written_lines++;
+        if(written_lines > 2)
+            break;
         memset(buff, 0, BUFSIZE);
     }
+    fclose(fp);
     printf("Finished writing the contents\n");
 }
 

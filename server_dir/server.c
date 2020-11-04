@@ -21,15 +21,21 @@ void sendf(int socketfd) {
             }
         }
     }
-    char line[BUFSIZE];
-    printf("Finished getting the name - [%s] [%s]\n", filename, buff);
+    printf("Finished getting the name - [%s]\n", filename);
     FILE *fp = fopen(filename, "r");
     if(fp == NULL) {
         perror("File");
         return;
     }
-    while((n = fread(line, sizeof(char), BUFSIZE, fp)) > 0) {
-        if(ferror(fp)) {
+    char line[BUFSIZE] = {0};
+    printf("Sending file\n");
+    int num_lines=0;
+    while(1) {
+        if((n = fread(line, sizeof(char), BUFSIZE, fp)) < 0) {
+            printf("Reading file error\n");
+            return;
+        }
+        if(n != BUFSIZE && ferror(fp)) {
             perror("File read");
             return;
         }
@@ -37,8 +43,13 @@ void sendf(int socketfd) {
             perror("Sending line");
             return;
         }
+        printf("Sent a line - %d\n", num_lines);
+        num_lines++;
+        if(num_lines > 2)
+            break;
         memset(line, 0, BUFSIZE);
     }
+    printf("Sent file (or) Failed\n");
 }
 
 int main(int argc, char const *argv[]) {
@@ -72,7 +83,8 @@ int main(int argc, char const *argv[]) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
-    sendf(server_fd);
+    //while(1)
+    sendf(new_socket);
     //valread = read(new_socket , buffer, 1024);  // read infromation received into the buffer
     //printf("%s\n",buffer);
     //send(new_socket , hello , strlen(hello) , 0 );  // use sendto() and recvfrom() for DGRAM
