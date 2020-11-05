@@ -50,31 +50,39 @@ void sendf(int socketfd) {
     printf("Num loops: %d\n", num_loops);
     sleep(1);
     while(num_loops > 0) {
+        printf("HERE 53\n");
         if(num_loops == 1 && fsize % BUFSIZE != 0) {
             if((n = read(fp, line, fsize%BUFSIZE)) < 0) {
                 printf("Reading file error\n");
                 return;
             }
+            printf("HERE 59\n");
             if(n != fsize%BUFSIZE) {
                 perror("File read");
                 return;
             }
+            printf("HERE 64\n");
         }
         else {
+            printf("HERE 67\n");
             if((n = read(fp, line, BUFSIZE)) < 0) {
                 printf("Reading file error\n");
                 return;
             }
+            printf("HERE 72\n");
             if(n != BUFSIZE) {
                 perror("File read");
                 return;
             }
+            printf("HERE 77\n");
         }
+        printf("HERE 79\n");
         if(send(socketfd, line, n, 0) == -1) {
             perror("Sending line");
             return;
         }
-        printf("Sent a line - %d %s\n", num_lines, line);
+        printf("HERE 84\n");
+        printf("Sent a line - %d\n", num_lines);
         num_lines++;
         memset(line, 0, BUFSIZE);
         num_loops--;

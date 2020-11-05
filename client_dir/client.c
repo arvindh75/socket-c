@@ -41,29 +41,35 @@ void get(int socketfd) {
         float progress = 0.0;
         while(num_loops > 0) {
             if(num_loops == 1 && atoi(size) % BUFSIZE != 0) {
+                //printf("HERE 44\n");
                 if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
                     perror("Reading from buffer");
                     break;
                 }
-                progress += (float)(n/atoi(size));
+                //printf("HERE 49\n");
+                progress += (float)(n)/atoi(size);
                 if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
                     perror("Writing content");
                     return;
                 }
+                //printf("HERE 55\n");
             }
             else {
+                //printf("HERE 58\n");
                 if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
                     perror("Reading from buffer");
                     break;
                 }
-                progress += (float)(n/atoi(size));
-                if(write(fp, buff, BUFSIZE) != n) {
+                progress += (float)(BUFSIZE)/atoi(size);
+                //printf("HERE 63\n");
+                if(write(fp, buff, BUFSIZE) != BUFSIZE) {
                     perror("Writing content");
                     return;
                 }
+                //printf("HERE 69\n");
             } 
             //printf("\nWriting a line - %d\n", written_lines);
-            sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
+            sprintf(prostr, "\rProgress : %.2f %c", progress * 100 - 1, '%');
             write(1, prostr, strlen(prostr));
             written_lines++;
             //if(written_lines > 0)
