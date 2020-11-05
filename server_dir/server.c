@@ -28,7 +28,7 @@ void sendf(int socketfd) {
     if(fp == -1) {
         perror("File");
         memset(no_file, 0, BUFSIZE);
-        if(send(socketfd, no_file, BUFSIZE, 0) == -1) {
+        if(send(socketfd, "0\0", 2, 0) == -1) {
             perror("Sending size");
         }
         return;
@@ -50,13 +50,25 @@ void sendf(int socketfd) {
     printf("Num loops: %d\n", num_loops);
     sleep(1);
     while(num_loops > 0) {
-        if((n = read(fp, line, fsize)) < 0) {
-            printf("Reading file error\n");
-            return;
+        if(num_loops == 1 && fsize % BUFSIZE != 0) {
+            if((n = read(fp, line, fsize%BUFSIZE)) < 0) {
+                printf("Reading file error\n");
+                return;
+            }
+            if(n != fsize%BUFSIZE) {
+                perror("File read");
+                return;
+            }
         }
-        if(n != fsize) {
-            perror("File read");
-            return;
+        else {
+            if((n = read(fp, line, BUFSIZE)) < 0) {
+                printf("Reading file error\n");
+                return;
+            }
+            if(n != BUFSIZE) {
+                perror("File read");
+                return;
+            }
         }
         if(send(socketfd, line, n, 0) == -1) {
             perror("Sending line");

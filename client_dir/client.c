@@ -40,20 +40,16 @@ void get(int socketfd) {
         printf("Num loops: %d\n", num_loops);
         float progress = 0.0;
         while(num_loops > 0) {
-            if(num_loops == 1) {
-                printf("HERE1\n");
+            if(num_loops == 1 && atoi(size) % BUFSIZE != 0) {
                 if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
                     perror("Reading from buffer");
                     break;
                 }
-                printf("HERE2\n");
                 progress += (float)(n/atoi(size));
-                printf("HERE3\n");
                 if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
                     perror("Writing content");
                     return;
                 }
-                printf("HERE4\n");
             }
             else {
                 if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
