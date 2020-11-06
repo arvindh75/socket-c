@@ -35,46 +35,41 @@ void get(int socketfd) {
         printf("File size: %d\n", atoi(size));
         int fp = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         ssize_t n;
-        int written_lines=0;
-        int num_loops = (atoi(size)/BUFSIZE) + 1;
-        printf("Num loops: %d\n", num_loops);
+        int size_i = (int) atoi(size);
+        int written_lines=1;
+        int rem = size_i % BUFSIZE;
+        int num_loops = (size_i/BUFSIZE) + 1;
         float progress = 0.0;
-        while(num_loops > 0) {
-            if(num_loops == 1 && atoi(size) % BUFSIZE != 0) {
-                //printf("HERE 44\n");
-                if((n = recv(socketfd, buff, atoi(size) % BUFSIZE, 0)) == -1) {
-                    perror("Reading from buffer");
-                    break;
-                }
-                //printf("HERE 49\n");
-                progress += (float)(n)/atoi(size);
-                if(write(fp, buff, atoi(size) % BUFSIZE) != n) {
-                    perror("Writing content");
-                    return;
-                }
-                //printf("HERE 55\n");
+        if(rem != 0) {
+            if((n = recv(socketfd, buff, size_i % BUFSIZE, 0)) == -1) {
+                perror("Reading from buffer");
+                break;
             }
-            else {
-                //printf("HERE 58\n");
-                if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
-                    perror("Reading from buffer");
-                    break;
-                }
-                progress += (float)(BUFSIZE)/atoi(size);
-                //printf("HERE 63\n");
-                if(write(fp, buff, BUFSIZE) != BUFSIZE) {
-                    perror("Writing content");
-                    return;
-                }
-                //printf("HERE 69\n");
-            } 
-            //printf("\nWriting a line - %d\n", written_lines);
-            sprintf(prostr, "\rProgress : %.2f %c", progress * 100 - 1, '%');
+            if(write(fp, buff, size_i % BUFSIZE) != n) {
+                perror("Writing content");
+                return;
+            }
+            progress += (float)(size_i % BUFSIZE)/size_i;
+            sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
+            write(1, prostr, strlen(prostr));
+            printf("\nWriting a line in rem - %d\n", written_lines);
+            written_lines++;
+        }
+        printf("Num loops: %d\n", num_loops);
+        while(num_loops--) {
+            if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
+                perror("Reading from buffer");
+                break;
+            }
+            progress += (float)(BUFSIZE)/size_i;
+            if(write(fp, buff, BUFSIZE) != BUFSIZE) {
+                perror("Writing content");
+                return;
+            }
+            printf("\nWriting a line - %d\n", written_lines);
+            sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
             write(1, prostr, strlen(prostr));
             written_lines++;
-            //if(written_lines > 0)
-            //    break;
-            num_loops--;
             memset(buff, 0, BUFSIZE);
         }
         close(fp);
@@ -82,7 +77,6 @@ void get(int socketfd) {
         arg = strtok(NULL, " \t");
     }
 }
-
 
 int main(int argc, char const *argv[]) {
     struct sockaddr_in address;

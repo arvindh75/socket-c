@@ -45,49 +45,45 @@ void sendf(int socketfd) {
     lseek(fp, 0, SEEK_SET);
     char line[BUFSIZE] = {0};
     printf("Sending file\n");
-    int num_lines=0;
+    int num_lines=1;
+    int rem = fsize % BUFSIZE;
     int num_loops = (fsize/BUFSIZE) + 1;
+    if(rem != 0) {
+        if((n = read(fp, line, fsize%BUFSIZE)) < 0) {
+            printf("Reading file error\n");
+            return;
+        }
+        if(n != fsize%BUFSIZE) {
+            perror("File read");
+            return;
+        }
+        if(send(socketfd, line, fsize%BUFSIZE, 0) == -1) {
+            perror("Sending line");
+            return;
+        }
+        printf("Sent a line from rem - %d\n", num_lines);
+        num_lines++;
+    }
     printf("Num loops: %d\n", num_loops);
-    sleep(1);
-    while(num_loops > 0) {
-        printf("HERE 53\n");
-        if(num_loops == 1 && fsize % BUFSIZE != 0) {
-            if((n = read(fp, line, fsize%BUFSIZE)) < 0) {
-                printf("Reading file error\n");
-                return;
-            }
-            printf("HERE 59\n");
-            if(n != fsize%BUFSIZE) {
-                perror("File read");
-                return;
-            }
-            printf("HERE 64\n");
+    while(num_loops--) {
+        if((n = read(fp, line, BUFSIZE)) < 0) {
+            printf("Reading file error\n");
+            return;
         }
-        else {
-            printf("HERE 67\n");
-            if((n = read(fp, line, BUFSIZE)) < 0) {
-                printf("Reading file error\n");
-                return;
-            }
-            printf("HERE 72\n");
-            if(n != BUFSIZE) {
-                perror("File read");
-                return;
-            }
-            printf("HERE 77\n");
+        if(n != BUFSIZE) {
+            perror("File read");
+            return;
         }
-        printf("HERE 79\n");
         if(send(socketfd, line, n, 0) == -1) {
             perror("Sending line");
             return;
         }
-        printf("HERE 84\n");
         printf("Sent a line - %d\n", num_lines);
         num_lines++;
         memset(line, 0, BUFSIZE);
-        num_loops--;
     }
     printf("Sent file \n");
+    usleep(0.5 * 1000);
 }
 
 int main(int argc, char const *argv[]) {
