@@ -38,12 +38,16 @@ void get(int socketfd) {
         int size_i = (int) atoi(size);
         int written_lines=1;
         int rem = size_i % BUFSIZE;
-        int num_loops = (size_i/BUFSIZE) + 1;
+        int num_loops = (size_i/BUFSIZE);
         float progress = 0.0;
+        memset(buff, '\0', BUFSIZE);
         if(rem != 0) {
             if((n = recv(socketfd, buff, size_i % BUFSIZE, 0)) == -1) {
                 perror("Reading from buffer");
                 break;
+            }
+            if(n != BUFSIZE) {
+                perror("Reading BUFSIZE");
             }
             if(write(fp, buff, size_i % BUFSIZE) != n) {
                 perror("Writing content");
@@ -55,25 +59,39 @@ void get(int socketfd) {
             printf("\nWriting a line in rem - %d\n", written_lines);
             written_lines++;
         }
+        memset(buff, '\0', BUFSIZE);
         printf("Num loops: %d\n", num_loops);
+        int rec_size;
+        int rec = 0;
+        int rec_total = 0;
+        memset(buff, 0, BUFSIZE);
         while(num_loops--) {
-            if((n = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
-                perror("Reading from buffer");
-                break;
-            }
-            progress += (float)(BUFSIZE)/size_i;
-            if(write(fp, buff, BUFSIZE) != BUFSIZE) {
-                perror("Writing content");
-                return;
-            }
-            printf("\nWriting a line - %d\n", written_lines);
+            rec=0;
+            do {
+                if((rec_size = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
+                    perror("Reading from buffer");
+                    break;
+                }
+                //if(rec_size != BUFSIZE) {
+                //    perror("Reading BUFSIZE");
+                //}
+                if(write(fp, buff, BUFSIZE) != BUFSIZE) {
+                    perror("Writing content");
+                    return;
+                }
+                rec += rec_size;
+            } while (rec < BUFSIZE);
+            rec_total += rec;
+            progress += (float)(rec)/size_i;
+            printf("\nWriting a line - %d [%d] [%d]\n", written_lines, rec, rec_total);
             sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
             write(1, prostr, strlen(prostr));
             written_lines++;
-            memset(buff, 0, BUFSIZE);
+            memset(buff, '\0', BUFSIZE);
+            //memset(buff, 0, BUFSIZE);
         }
-        close(fp);
         printf("\nFinished writing the contents\n");
+        close(fp);
         arg = strtok(NULL, " \t");
     }
 }
@@ -84,8 +102,7 @@ int main(int argc, char const *argv[]) {
     struct sockaddr_in serv_addr;
     //char *hello = "Hello from client";
     char buffer[1024] = {0};
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("\n Socket creation error \n");
         return -1;
     }
