@@ -23,54 +23,22 @@ void getf(int socketfd) {
         memset(&filename, '\0', sizeof(filename));
         strcpy(filename, arg);
         printf("\nFilename: %s\n", arg);
-        
         //Sending filename
         if(send(socketfd, filename, BUFSIZE, 0) == -1) {
             perror("Sending filename");
             return;
         }
-        memset(&ack, '\0', sizeof(ack));
-        
-        //Waiting for confirmation
-        if(recv(socketfd, ack, BUFSIZE, 0) == -1) {
-            perror("Receiving ack");
-            return;
-        }
-        printf("Ack for filename: [%s]\n", ack);
-        if(strcmp(ack, "ok")) {
-            printf("\nNot synchronised, Retry\n");
-            return;
-        }
-
         //Reading file size
         memset(&size, '\0', sizeof(size));
         if(recv(socketfd, size, BUFSIZE, 0) == -1 || sizeof(size) == 0) {
             perror("Reading from buffer");
-            memset(&ack, '\0', sizeof(ack));
-            strcpy(ack, "no");
-            printf("Sending no ack for filesize\n");
-            if(send(socketfd, ack, sizeof(ack), 0) == -1) {
-                perror("Sending ack");
-                return;
-            }
             return;
         }
         printf("File size: [%s]\n", size);
-        
-        //Sending confirmation
-        memset(&ack, '\0', sizeof(ack));
-        strcpy(ack, "ok");
-        printf("Sending ok ack for filesize\n");
-        if(send(socketfd, ack, sizeof(ack), 0) == -1) {
-            perror("Sending ack");
-            return;
-        }
-        memset(&ack, '\0', sizeof(ack));
         if(!strcmp(size, "0")) {
             printf("File not found!\n");
             return;
         }
-        
         //Opening file
         FILE* fp2 = fopen(arg, "wb");
         int size_i = (int) atoi(size);
@@ -78,9 +46,12 @@ void getf(int socketfd) {
         float progress = 0.0;
         int read_ret = 0;
         memset(&buff, '\0', sizeof(buff));
-        
         //Reading data
-        while((read_ret = read(socketfd, buff, BUFSIZE)) > 0) {
+        while(progress < 100) {
+            if((read_ret = read(socketfd, buff, BUFSIZE)) < 0) {
+                perror("Reading");
+                continue;
+            }
             if(fwrite(buff, sizeof(char), read_ret, fp2) < read_ret) {
                 perror("Writing content");
                 return;
@@ -92,7 +63,6 @@ void getf(int socketfd) {
             //written_lines++;
             memset(&buff, '\0', sizeof(buff));
         }
-        
         printf("\nFinished writing the contents\n");
         fclose(fp2);
         arg = strtok(NULL, " \t");

@@ -19,29 +19,12 @@ void sendf(int socketfd) {
     int it=0;
     memset(&buff, '\0', sizeof(buff));
     memset(&filename, '\0', sizeof(filename));
-    memset(&ack, '\0', sizeof(ack));
-    
     //Reading file name
     if(read(socketfd, filename, BUFSIZE) == -1) {
         perror("Reading file name");
-        memset(&ack, '\0', sizeof(ack));
-        strcpy(ack, "no");
-        if(send(socketfd, ack, sizeof(ack), 0) == -1) {
-            perror("Sending ack");
-            return;
-        }
-    }
-    
-    //Sending ack
-    memset(&ack, '\0', sizeof(ack));
-    strcpy(ack, "ok");
-    printf("Sending ok ack for filename\n");
-    if(send(socketfd, ack, sizeof(ack), 0) == -1) {
-        perror("Sending ack");
         return;
     }
     printf("Finished getting the name - [%s]\n", filename);
-    
     //Opening files
     int fp = open(filename, O_RDONLY);
     FILE* fp2 = fopen(filename, "r");
@@ -56,7 +39,6 @@ void sendf(int socketfd) {
         }
         return;
     }
-    
     //Getting file size
     int fsize = lseek(fp, 0, SEEK_END);
     close(fp);
@@ -66,25 +48,11 @@ void sendf(int socketfd) {
     memset(&buff, '\0', sizeof(buff));
     strcpy(buff, fsize_st);
     printf("Size: %s\n", buff);
-    
     //Sending file size
     if(send(socketfd, buff, sizeof(buff), 0) == -1) {
         perror("Sending size");
         return;
     }
-    memset(&ack, '\0', sizeof(ack));
-    
-    //Waiting for ack
-    if(recv(socketfd, ack, BUFSIZE, 0) == -1) {
-        perror("Receiving ack");
-        return;
-    }
-    printf("Ack for filesize: [%s]\n", ack);
-    if(strcmp(ack, "ok")) {
-        printf("\nNot synchronised, Retry\n");
-        return;
-    }
-    
     //Sending file
     printf("Sending file\n");
     //int num_lines=1;
@@ -134,7 +102,7 @@ int main(int argc, char const *argv[]) {
     }
     while(1) {
         sendf(new_socket);
-        sleep(5);
+        //sleep(5);
     }
     return 0;
 }
