@@ -6,92 +6,75 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #define PORT 8000
-#define BUFSIZE 100000
+#define BUFSIZE 16384
 
-void get(int socketfd) {
-    char* arg;
+void sigpip_hand(int signum) {
+    fprintf(stdout, "\nServer was shutdown unexpectedly.\n");
+    exit(EXIT_FAILURE);
+}
+
+void sigint_hand(int signum) {
+    fprintf(stdout, "\n<Ctrl-C> attempt detected, Please quit using exit command\n");
+    //exit(EXIT_FAILURE);
+}
+
+void getf(int socketfd) {
+    char *arg;
     arg = strtok(NULL, " \t");
     while(arg != NULL) {
-        char filename[BUFSIZE];
-        char size[BUFSIZE];
-        char buff[BUFSIZE];
+        char filename [BUFSIZE];
+        char ack[BUFSIZE];
+        char size [BUFSIZE];
+        char buff [BUFSIZE];
         char prostr[1000];
+        memset(&filename, '\0', sizeof(filename));
         strcpy(filename, arg);
-        printf("\nFilename: %s\n", filename);
-        if(send(socketfd, filename, strlen(filename), 0) == -1) {
+        printf("\nFilename: %s\n", arg);
+        //Sending filename
+        if(send(socketfd, filename, BUFSIZE, 0) == -1) {
             perror("Sending filename");
-            return;
+            continue;
         }
-        if(recv(socketfd, size, BUFSIZE, 0) == -1) {
+        //Reading file size
+        memset(&size, '\0', sizeof(size));
+        if(recv(socketfd, size, BUFSIZE, 0) == -1 || sizeof(size) == 0) {
             perror("Reading from buffer");
             return;
         }
-        if(atoi(size) == 0) {
+        printf("File size: [%s]\n", size);
+        if(!strcmp(size, "0")) {
             printf("File not found!\n");
-            return;
+            arg = strtok(NULL, " \t");
+            continue;
         }
-        printf("File size: %d\n", atoi(size));
-        int fp = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        ssize_t n;
+        //Opening file
+        FILE* fp2 = fopen(arg, "wb");
         int size_i = (int) atoi(size);
-        int written_lines=1;
-        int rem = size_i % BUFSIZE;
-        int num_loops = (size_i/BUFSIZE);
-        float progress = 0.0;
-        memset(buff, '\0', BUFSIZE);
-        if(rem != 0) {
-            if((n = recv(socketfd, buff, size_i % BUFSIZE, 0)) == -1) {
-                perror("Reading from buffer");
-                break;
-            }
-            if(n != BUFSIZE) {
-                perror("Reading BUFSIZE");
-            }
-            if(write(fp, buff, size_i % BUFSIZE) != n) {
+        //int written_lines = 1;
+        double progress = 0.0;
+        int read_ret = 0;
+        memset(&buff, '\0', sizeof(buff));
+        //Reading data
+        while((read_ret = recv(socketfd, buff, BUFSIZE,0)) > 0) {
+            if(fwrite(buff, sizeof(char), read_ret, fp2) < read_ret) {
                 perror("Writing content");
                 return;
             }
-            progress += (float)(size_i % BUFSIZE)/size_i;
+            //printf("\nWriting a line - %d [%d]\n", written_lines, read_ret);
+            progress += (double)(read_ret)/size_i;
             sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
             write(1, prostr, strlen(prostr));
-            printf("\nWriting a line in rem - %d\n", written_lines);
-            written_lines++;
-        }
-        memset(buff, '\0', BUFSIZE);
-        printf("Num loops: %d\n", num_loops);
-        int rec_size;
-        int rec = 0;
-        int rec_total = 0;
-        memset(buff, 0, BUFSIZE);
-        while(num_loops--) {
-            rec=0;
-            do {
-                if((rec_size = recv(socketfd, buff, BUFSIZE, 0)) == -1) {
-                    perror("Reading from buffer");
-                    break;
-                }
-                //if(rec_size != BUFSIZE) {
-                //    perror("Reading BUFSIZE");
-                //}
-                if(write(fp, buff, BUFSIZE) != BUFSIZE) {
-                    perror("Writing content");
-                    return;
-                }
-                rec += rec_size;
-            } while (rec < BUFSIZE);
-            rec_total += rec;
-            progress += (float)(rec)/size_i;
-            printf("\nWriting a line - %d [%d] [%d]\n", written_lines, rec, rec_total);
-            sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
-            write(1, prostr, strlen(prostr));
-            written_lines++;
-            memset(buff, '\0', BUFSIZE);
-            //memset(buff, 0, BUFSIZE);
+            //written_lines++;
+            memset(&buff, '\0', sizeof(buff));
+            if(1.0 - progress <= (double)0.01/size_i) {
+                break;
+            }
         }
         printf("\nFinished writing the contents\n");
-        close(fp);
+        fclose(fp2);
         arg = strtok(NULL, " \t");
     }
 }
@@ -100,7 +83,6 @@ int main(int argc, char const *argv[]) {
     struct sockaddr_in address;
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
-    //char *hello = "Hello from client";
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("\n Socket creation error \n");
@@ -113,10 +95,14 @@ int main(int argc, char const *argv[]) {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
+    printf("Waiting for a server\n");
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         printf("\nConnection Failed \n");
         return -1;
     }
+    printf("Connection established with the server\n");
+    signal(SIGPIPE, sigpip_hand);
+    signal(SIGINT, sigint_hand);
     char input[10000];
     int exit_read = 0; 
     int leninp;
@@ -125,7 +111,7 @@ int main(int argc, char const *argv[]) {
     while(1) {
         leninp = 0;
         exit_read = 0;
-        printf("client> ");
+        printf("\nclient> ");
         while (exit_read == 0) {
             c = getchar();
             if (c == EOF) {
@@ -146,9 +132,15 @@ int main(int argc, char const *argv[]) {
         inp = strtok(input, " \t");
         if(inp) {
             if(!strcmp(inp, "get")) {
-                get(sock);
+                getf(sock);
             }
             else if (!strcmp(inp, "exit")) {
+                char exit_f [BUFSIZE];
+                memset(&exit_f, '\0', sizeof(exit_f));
+                strcpy(exit_f, "exit");
+                if(send(sock, exit_f, BUFSIZE, 0) == -1) {
+                    perror("Sending exit");
+                }
                 break;
             }
             else {
@@ -157,9 +149,5 @@ int main(int argc, char const *argv[]) {
         }
     }
     close(sock);
-    //send(sock , hello , strlen(hello) , 0 );
-    //printf("Hello message sent\n");
-    //valread = read( sock , buffer, 1024);
-    //printf("%s\n",buffer);
     return 0;
 }
