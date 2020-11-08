@@ -6,10 +6,20 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <fcntl.h>
-#include <time.h>
+#include <signal.h>
 
 #define PORT 8000
 #define BUFSIZE 16384
+
+void sigpip_hand(int signum) {
+    fprintf(stdout, "\nServer was shutdown unexpectedly.\n");
+    exit(EXIT_FAILURE);
+}
+
+void sigint_hand(int signum) {
+    fprintf(stdout, "\n<Ctrl-C> attempt detected, Please quit using exit command\n");
+    //exit(EXIT_FAILURE);
+}
 
 void getf(int socketfd) {
     char *arg;
@@ -26,7 +36,8 @@ void getf(int socketfd) {
         //Sending filename
         if(send(socketfd, filename, BUFSIZE, 0) == -1) {
             perror("Sending filename");
-            return;
+            arg = strtok(NULL, " \t");
+            continue;
         }
         //Reading file size
         memset(&size, '\0', sizeof(size));
@@ -84,10 +95,14 @@ int main(int argc, char const *argv[]) {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
+    printf("Waiting for a server\n");
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         printf("\nConnection Failed \n");
         return -1;
     }
+    printf("Connection established with the server\n");
+    signal(SIGPIPE, sigpip_hand);
+    signal(SIGINT, sigint_hand);
     char input[10000];
     int exit_read = 0; 
     int leninp;
@@ -120,6 +135,12 @@ int main(int argc, char const *argv[]) {
                 getf(sock);
             }
             else if (!strcmp(inp, "exit")) {
+                char exit_f [BUFSIZE];
+                memset(&exit_f, '\0', sizeof(exit_f));
+                strcpy(exit_f, "exit");
+                if(send(sock, exit_f, BUFSIZE, 0) == -1) {
+                    perror("Sending exit");
+                }
                 break;
             }
             else {

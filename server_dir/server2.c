@@ -6,10 +6,23 @@
 #include <string.h>
 #include <fcntl.h>
 #include <time.h>
+#include <signal.h>
 
 #define PORT 8000
-
 #define BUFSIZE 16384
+
+int cont=1;
+void sigpip_hand(int signum) {
+    fprintf(stdout, "\nCurrent client has quit unexpectedly.\n");
+    sleep(5);
+    cont=0;
+    //signal(SIGINT, SIG_DFL);
+}
+
+void sigint_hand(int signum) {
+    fprintf(stdout, "\n<Ctrl-C> attempt detected, quitting\n");
+    exit(EXIT_SUCCESS);
+}
 
 void sendf(int socketfd) {
     char filename[BUFSIZE];
@@ -24,6 +37,13 @@ void sendf(int socketfd) {
         perror("Reading file name");
         return;
     }
+    if(!strcmp(filename, "exit")) {
+        cont=0;
+        return;
+    }
+    //if(strlen(filename) == 0) {
+    //    return;
+    //}
     printf("Finished getting the name - [%s]\n", filename);
     //Opening files
     int fp = open(filename, O_RDONLY);
@@ -73,6 +93,8 @@ void sendf(int socketfd) {
 }
 
 int main(int argc, char const *argv[]) {
+    signal(SIGPIPE, sigpip_hand);
+    signal(SIGINT, sigint_hand);
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -97,13 +119,14 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
     while(1) {
+        cont=1;
         printf("Waiting for a client\n");
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
         printf("Found a client, connection established\n");
-        while(1) {
+        while(cont) {
             sendf(new_socket);
             //sleep(5);
         }
