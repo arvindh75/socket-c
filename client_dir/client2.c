@@ -58,7 +58,7 @@ void getf(int socketfd) {
             write(1, prostr, strlen(prostr));
             //written_lines++;
             memset(&buff, '\0', sizeof(buff));
-            if(1.0 - progress <= 0.00000000000000000000000001) {
+            if(1.0 - progress <= (double)0.01/size_i) {
                 break;
             }
         }
