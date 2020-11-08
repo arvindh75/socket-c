@@ -96,13 +96,17 @@ int main(int argc, char const *argv[]) {
         perror("listen");
         exit(EXIT_FAILURE);
     }
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
-        perror("accept");
-        exit(EXIT_FAILURE);
-    }
     while(1) {
-        sendf(new_socket);
-        //sleep(5);
+        printf("Waiting for a client\n");
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
+        printf("Found a client, connection established\n");
+        while(1) {
+            sendf(new_socket);
+            //sleep(5);
+        }
     }
     return 0;
 }

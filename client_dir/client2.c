@@ -13,12 +13,12 @@
 
 void getf(int socketfd) {
     char *arg;
-    char filename [BUFSIZE];
-    char ack[BUFSIZE];
-    char size [BUFSIZE];
-    char buff [BUFSIZE];
     arg = strtok(NULL, " \t");
     while(arg != NULL) {
+        char filename [BUFSIZE];
+        char ack[BUFSIZE];
+        char size [BUFSIZE];
+        char buff [BUFSIZE];
         char prostr[1000];
         memset(&filename, '\0', sizeof(filename));
         strcpy(filename, arg);
@@ -43,7 +43,7 @@ void getf(int socketfd) {
         FILE* fp2 = fopen(arg, "wb");
         int size_i = (int) atoi(size);
         //int written_lines = 1;
-        float progress = 0.0;
+        double progress = 0.0;
         int read_ret = 0;
         memset(&buff, '\0', sizeof(buff));
         //Reading data
@@ -53,12 +53,12 @@ void getf(int socketfd) {
                 return;
             }
             //printf("\nWriting a line - %d [%d]\n", written_lines, read_ret);
-            progress += (float)(read_ret)/size_i;
+            progress += (double)(read_ret)/size_i;
             sprintf(prostr, "\rProgress : %.2f %c", progress * 100, '%');
             write(1, prostr, strlen(prostr));
             //written_lines++;
             memset(&buff, '\0', sizeof(buff));
-            if(1.0 - progress <= 0.000001) {
+            if(1.0 - progress <= 0.00000000000000000000000001) {
                 break;
             }
         }
