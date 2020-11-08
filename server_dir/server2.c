@@ -9,7 +9,7 @@
 
 #define PORT 8000
 
-#define BUFSIZE 131072
+#define BUFSIZE 16384
 
 void sendf(int socketfd) {
     char filename[BUFSIZE];
@@ -20,7 +20,7 @@ void sendf(int socketfd) {
     memset(&buff, '\0', sizeof(buff));
     memset(&filename, '\0', sizeof(filename));
     //Reading file name
-    if(read(socketfd, filename, BUFSIZE) == -1) {
+    if(recv(socketfd, filename, BUFSIZE,0) == -1) {
         perror("Reading file name");
         return;
     }

@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define PORT 8000
-#define BUFSIZE 131072
+#define BUFSIZE 16384
 
 void getf(int socketfd) {
     char *arg;
@@ -47,11 +47,7 @@ void getf(int socketfd) {
         int read_ret = 0;
         memset(&buff, '\0', sizeof(buff));
         //Reading data
-        while(progress < 100) {
-            if((read_ret = read(socketfd, buff, BUFSIZE)) < 0) {
-                perror("Reading");
-                continue;
-            }
+        while((read_ret = recv(socketfd, buff, BUFSIZE,0)) > 0) {
             if(fwrite(buff, sizeof(char), read_ret, fp2) < read_ret) {
                 perror("Writing content");
                 return;
@@ -62,6 +58,9 @@ void getf(int socketfd) {
             write(1, prostr, strlen(prostr));
             //written_lines++;
             memset(&buff, '\0', sizeof(buff));
+            if(1.0 - progress <= 0.000001) {
+                break;
+            }
         }
         printf("\nFinished writing the contents\n");
         fclose(fp2);
