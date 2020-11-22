@@ -30,3 +30,9 @@ exit
 ```
 - Multiple clients can obtain data from a single server but one by one.
 - The code flow is pretty much straightforward.
+
+### File with random ASCII characters can be created using gen.sh (size in mb and name are arguments).
+```
+bash gen.sh 2 2mb.txt
+```
+generates a file of size 2 mb with name `2mb.txt` in ./server_dir
