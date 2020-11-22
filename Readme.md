@@ -1,5 +1,5 @@
-#Sockets in C
-##Instructions
+# Sockets in C
+## Instructions
 - Un-tar the downloaded folder 
 - Switch to the directory using
 ```C
